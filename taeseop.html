@@ -3,119 +3,221 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>합성치사(Synthetic Lethality) 시뮬레이터</title>
+    <title>합성치사 라이브 시뮬레이션v2</title>
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f6; text-align: center; margin: 0; padding: 20px; }
-        h1 { color: #2c3e50; }
-        .container { display: flex; justify-content: center; gap: 30px; margin-top: 20px; flex-wrap: wrap; }
-        
-        .cell-card {
-            background: white; border-radius: 15px; box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-            width: 320px; padding: 20px; transition: 0.3s;
-        }
-        .normal-cell { border-top: 6px solid #27ae60; }
-        .cancer-cell { border-top: 6px solid #e74c3c; }
-        
-        h2 { margin-top: 0; font-size: 1.5rem; }
-        .normal-cell h2 { color: #27ae60; }
-        .cancer-cell h2 { color: #e74c3c; }
-
-        .pathway {
-            background: #ecf0f1; border-radius: 10px; padding: 15px; margin: 15px 0;
-            font-weight: bold; font-size: 1.1rem; color: white; transition: 0.5s;
-        }
-        .active { background-color: #2ecc71; } /* 초록색: 정상 가동 */
-        .inactive { background-color: #e74c3c; } /* 빨간색: 고장/차단 */
-        
-        .status-box {
-            font-size: 1.2rem; font-weight: bold; padding: 15px;
-            border-radius: 10px; background: #ecf0f1; color: #34495e; margin-top: 20px;
+        /* 실험실(현미경) 느낌의 어두운 배경 */
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden;
         }
 
-        .controls { margin-top: 30px; }
+        h1 { color: #38bdf8; text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+        #status-text { font-size: 1.2rem; color: #cbd5e1; height: 30px; margin-bottom: 20px; }
+
+        /* 현미경 뷰 컨테이너 */
+        .microscope-view {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 50px;
+            margin: 40px auto;
+            position: relative;
+        }
+
+        /* 세포 기본 디자인 (원형) */
+        .cell {
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 1s ease;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+        }
+
+        /* 정상 세포: 푸른빛 */
+        #normal-cell {
+            background: radial-gradient(circle, #1e3a8a 0%, #0f172a 100%);
+            border: 3px solid #3b82f6;
+            box-shadow: 0 0 40px rgba(59, 130, 246, 0.4);
+        }
+
+        /* 암세포: 붉은빛 */
+        #cancer-cell {
+            background: radial-gradient(circle, #4c0519 0%, #0f172a 100%);
+            border: 3px solid #e11d48;
+            box-shadow: 0 0 40px rgba(225, 29, 72, 0.4);
+        }
+
+        /* 세포핵 (DNA가 있는 곳) */
+        .nucleus {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3rem; /* DNA 이모지 크기 */
+            position: relative;
+            border: 1px dashed rgba(255,255,255,0.3);
+        }
+
+        /* 복구 효소(단백질) 아이콘들 */
+        .enzyme {
+            position: absolute;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            transition: all 0.5s;
+        }
+
+        /* OGG1 효소 (A경로) */
+        .ogg1 { top: 20px; left: 50%; transform: translateX(-50%); background-color: #10b981; }
+        
+        /* BRCA 효소 (B경로) */
+        .brca { bottom: 20px; left: 50%; transform: translateX(-50%); background-color: #3b82f6; }
+        
+        /* 고장난 효소 스타일 */
+        .broken { background-color: #475569 !important; color: #94a3b8 !important; text-decoration: line-through; box-shadow: none; border: 1px solid #334155; }
+
+        /* 약물(알약) 아이콘 애니메이션 */
+        .drug {
+            position: absolute;
+            font-size: 2rem;
+            top: -50px;
+            opacity: 0;
+            transition: all 1s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        /* 암세포 사멸(Apoptosis) 부르르 떠는 애니메이션 */
+        @keyframes apoptosis-shake {
+            0% { transform: translate(1px, 1px) rotate(0deg) scale(1); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg) scale(0.95); }
+            20% { transform: translate(-3px, 0px) rotate(1deg) scale(0.9); }
+            30% { transform: translate(3px, 2px) rotate(0deg) scale(0.85); filter: grayscale(0.5); }
+            40% { transform: translate(1px, -1px) rotate(1deg) scale(0.8); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg) scale(0.7); }
+            60% { transform: translate(-3px, 1px) rotate(0deg) scale(0.6); filter: grayscale(1); }
+            70% { transform: translate(3px, 1px) rotate(-1deg) scale(0.5); }
+            80% { transform: translate(-1px, -1px) rotate(1deg) scale(0.4); opacity: 0.5; }
+            90% { transform: translate(1px, 2px) rotate(0deg) scale(0.2); opacity: 0.2; }
+            100% { transform: scale(0); opacity: 0; display: none; }
+        }
+
+        .dead { animation: apoptosis-shake 2s forwards; }
+
+        /* 하단 조작 버튼 */
+        .controls { margin-top: 50px; }
         button {
-            background-color: #3498db; color: white; border: none; padding: 15px 30px;
-            font-size: 1.2rem; border-radius: 30px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: 0.2s; font-weight: bold;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white; border: none; padding: 15px 40px; font-size: 1.2rem;
+            border-radius: 50px; cursor: pointer; font-weight: bold;
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.4); transition: 0.3s;
         }
-        button:hover { background-color: #2980b9; transform: translateY(-2px); }
-        button:disabled { background-color: #95a5a6; cursor: not-allowed; transform: none; }
+        button:hover { transform: translateY(-3px); box-shadow: 0 15px 25px rgba(37, 99, 235, 0.6); }
+        button:disabled { background: #475569; cursor: not-allowed; box-shadow: none; transform: none; }
         
-        #step-desc { font-size: 1.2rem; color: #7f8c8d; margin-bottom: 20px; font-weight: bold; }
+        .label { margin-top: 15px; font-weight: bold; font-size: 1.2rem; letter-spacing: 1px; }
     </style>
 </head>
 <body>
 
-    <h1>🧬 합성치사 메커니즘 시뮬레이터</h1>
-    <p id="step-desc">1단계: 약물 투여 전 (정상 상태)</p>
+    <h1>🔬 세포 내 DNA 수선 시뮬레이션</h1>
+    <div id="status-text">▶ 세포들이 분열하며 DNA 복제를 진행하고 있습니다.</div>
 
-    <div class="container">
-        <!-- 정상 세포 표 -->
-        <div class="cell-card normal-cell" id="normal-box">
-            <h2>정상 세포 (Safe)</h2>
-            <div class="pathway active" id="n-path-a">A 경로 (OGG1 효소)<br><small>상태: 정상 작동</small></div>
-            <div class="pathway active" id="n-path-b">B 경로 (BRCA 유전자)<br><small>상태: 정상 작동</small></div>
-            <div class="status-box" id="n-status">✅ 생존 (2중 방화벽 가동)</div>
+    <div class="microscope-view">
+        
+        <!-- 정상 세포 -->
+        <div>
+            <div class="cell" id="normal-cell">
+                <div class="drug" id="drug-n">💊</div>
+                <div class="enzyme ogg1" id="n-ogg1">OGG1 (A경로)</div>
+                <div class="nucleus" id="n-dna">🧬</div>
+                <div class="enzyme brca" id="n-brca">BRCA (B경로)</div>
+            </div>
+            <div class="label" style="color: #3b82f6;">정상 세포</div>
         </div>
 
-        <!-- 암세포 표 -->
-        <div class="cell-card cancer-cell" id="cancer-box">
-            <h2>암세포 (Cancer)</h2>
-            <div class="pathway active" id="c-path-a">A 경로 (OGG1 효소)<br><small>상태: 정상 작동</small></div>
-            <div class="pathway inactive" id="c-path-b">B 경로 (BRCA 유전자)<br><small>상태: 돌연변이로 파괴됨</small></div>
-            <div class="status-box" id="c-status">⚠️ 간신히 연명 중 (외줄 타기)</div>
+        <!-- 암세포 -->
+        <div>
+            <div class="cell" id="cancer-cell">
+                <div class="drug" id="drug-c">💊</div>
+                <div class="enzyme ogg1" id="c-ogg1">OGG1 (A경로)</div>
+                <div class="nucleus" id="c-dna">🧬</div>
+                <!-- 암세포는 태생적으로 BRCA가 고장나 있음 -->
+                <div class="enzyme brca broken" id="c-brca">BRCA 돌연변이</div>
+            </div>
+            <div class="label" style="color: #e11d48;">암세포</div>
         </div>
+
     </div>
 
     <div class="controls">
-        <button id="next-btn" onclick="nextStep()">🧪 표적항암제(OGG1 저해제) 투여하기</button>
-        <button id="reset-btn" onclick="resetSim()" style="display: none; background-color: #95a5a6;">🔄 처음으로</button>
+        <button id="action-btn" onclick="applyDrug()">🧪 OGG1 저해제 투여하기</button>
     </div>
 
     <script>
-        let step = 1;
+        const statusText = document.getElementById('status-text');
+        const actionBtn = document.getElementById('action-btn');
 
-        function nextStep() {
-            if (step === 1) {
-                // 2단계: 약물 투여 (OGG1 저해)
-                document.getElementById('step-desc').innerText = "2단계: OGG1 활성 부위 차단 중...";
-                document.getElementById('step-desc').style.color = "#d35400";
+        function applyDrug() {
+            actionBtn.disabled = true;
+            statusText.innerText = "▶ 약물이 세포 내로 침투하여 OGG1 효소를 공격합니다!";
+            statusText.style.color = "#f59e0b";
+
+            // 1. 약물 떨어지는 애니메이션
+            document.getElementById('drug-n').style.top = "60px";
+            document.getElementById('drug-n').style.opacity = "1";
+            document.getElementById('drug-c').style.top = "60px";
+            document.getElementById('drug-c').style.opacity = "1";
+
+            // 2초 뒤 OGG1 마비 효과
+            setTimeout(() => {
+                document.getElementById('n-ogg1').classList.add('broken');
+                document.getElementById('n-ogg1').innerText = "OGG1 차단됨";
                 
-                // 정상세포 A경로 차단
-                document.getElementById('n-path-a').className = "pathway inactive";
-                document.getElementById('n-path-a').innerHTML = "A 경로 (OGG1 효소)<br><small>상태: 약물에 의해 차단됨</small>";
+                document.getElementById('c-ogg1').classList.add('broken');
+                document.getElementById('c-ogg1').innerText = "OGG1 차단됨";
+
+                statusText.innerText = "▶ OGG1 차단 완료! DNA 미세 손상이 누적되기 시작합니다...";
+                statusText.style.color = "#ef4444";
                 
-                // 암세포 A경로 차단
-                document.getElementById('c-path-a').className = "pathway inactive";
-                document.getElementById('c-path-a').innerHTML = "A 경로 (OGG1 효소)<br><small>상태: 약물에 의해 차단됨</small>";
+                // DNA 손상 이모지로 변경
+                document.getElementById('n-dna').innerText = "⚠️";
+                document.getElementById('c-dna').innerText = "⚠️";
+            }, 1500);
 
-                document.getElementById('next-btn').innerText = "▶ 결과 확인하기";
-                step = 2;
+            // 4초 뒤 최종 결과 (합성치사 발동)
+            setTimeout(() => {
+                // 정상 세포: BRCA가 DNA를 고침
+                document.getElementById('n-brca').style.transform = "translateX(-50%) scale(1.3)";
+                document.getElementById('n-brca').style.backgroundColor = "#22c55e";
+                document.getElementById('n-dna').innerText = "✨🧬✨"; // 복구 완료
+                document.getElementById('normal-cell').style.boxShadow = "0 0 50px rgba(34, 197, 94, 0.8)";
+                document.getElementById('normal-cell').style.border = "3px solid #22c55e";
 
-            } else if (step === 2) {
-                // 3단계: 최종 결과 (합성치사)
-                document.getElementById('step-desc').innerText = "3단계: 최종 결과 (합성치사 완성!)";
-                document.getElementById('step-desc').style.color = "#c0392b";
+                // 암세포: 고칠 방법이 없어서 사멸 (Apoptosis)
+                document.getElementById('c-dna').innerText = "💥"; // 붕괴
+                document.getElementById('cancer-cell').classList.add('dead'); // 부르르 떨며 사라짐
 
-                // 정상세포 결과
-                let nStatus = document.getElementById('n-status');
-                nStatus.innerHTML = "✅ 생존<br><small>(B 경로가 백업하여 복구 성공)</small>";
-                nStatus.style.background = "#d4efdf"; nStatus.style.color = "#196f3d";
+                statusText.innerHTML = "▶ <b>결과:</b> 정상 세포는 B경로로 생존! 암세포는 2중 복구 실패로 <b>사멸(합성치사)</b>했습니다!";
+                statusText.style.color = "#22c55e";
 
-                // 암세포 결과 (합성치사)
-                let cStatus = document.getElementById('c-status');
-                cStatus.innerHTML = "💥 세포 사멸 (Apoptosis)<br><small>(2중 복구 실패로 자폭!)</small>";
-                cStatus.style.background = "#fadbd8"; cStatus.style.color = "#943126";
-                document.getElementById('cancer-box').style.transform = "scale(0.95)";
-                document.getElementById('cancer-box').style.opacity = "0.7";
-
-                document.getElementById('next-btn').style.display = "none";
-                document.getElementById('reset-btn').style.display = "inline-block";
-            }
-        }
-
-        function resetSim() {
-            location.reload(); // 페이지 새로고침으로 초기화
+                actionBtn.innerText = "🔄 다시 실험하기";
+                actionBtn.disabled = false;
+                actionBtn.onclick = () => location.reload();
+            }, 4000);
         }
     </script>
 </body>

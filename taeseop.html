@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>합성치사(Synthetic Lethality) 시뮬레이터</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f6; text-align: center; margin: 0; padding: 20px; }
+        h1 { color: #2c3e50; }
+        .container { display: flex; justify-content: center; gap: 30px; margin-top: 20px; flex-wrap: wrap; }
+        
+        .cell-card {
+            background: white; border-radius: 15px; box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+            width: 320px; padding: 20px; transition: 0.3s;
+        }
+        .normal-cell { border-top: 6px solid #27ae60; }
+        .cancer-cell { border-top: 6px solid #e74c3c; }
+        
+        h2 { margin-top: 0; font-size: 1.5rem; }
+        .normal-cell h2 { color: #27ae60; }
+        .cancer-cell h2 { color: #e74c3c; }
+
+        .pathway {
+            background: #ecf0f1; border-radius: 10px; padding: 15px; margin: 15px 0;
+            font-weight: bold; font-size: 1.1rem; color: white; transition: 0.5s;
+        }
+        .active { background-color: #2ecc71; } /* 초록색: 정상 가동 */
+        .inactive { background-color: #e74c3c; } /* 빨간색: 고장/차단 */
+        
+        .status-box {
+            font-size: 1.2rem; font-weight: bold; padding: 15px;
+            border-radius: 10px; background: #ecf0f1; color: #34495e; margin-top: 20px;
+        }
+
+        .controls { margin-top: 30px; }
+        button {
+            background-color: #3498db; color: white; border: none; padding: 15px 30px;
+            font-size: 1.2rem; border-radius: 30px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: 0.2s; font-weight: bold;
+        }
+        button:hover { background-color: #2980b9; transform: translateY(-2px); }
+        button:disabled { background-color: #95a5a6; cursor: not-allowed; transform: none; }
+        
+        #step-desc { font-size: 1.2rem; color: #7f8c8d; margin-bottom: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>🧬 합성치사 메커니즘 시뮬레이터</h1>
+    <p id="step-desc">1단계: 약물 투여 전 (정상 상태)</p>
+
+    <div class="container">
+        <!-- 정상 세포 표 -->
+        <div class="cell-card normal-cell" id="normal-box">
+            <h2>정상 세포 (Safe)</h2>
+            <div class="pathway active" id="n-path-a">A 경로 (OGG1 효소)<br><small>상태: 정상 작동</small></div>
+            <div class="pathway active" id="n-path-b">B 경로 (BRCA 유전자)<br><small>상태: 정상 작동</small></div>
+            <div class="status-box" id="n-status">✅ 생존 (2중 방화벽 가동)</div>
+        </div>
+
+        <!-- 암세포 표 -->
+        <div class="cell-card cancer-cell" id="cancer-box">
+            <h2>암세포 (Cancer)</h2>
+            <div class="pathway active" id="c-path-a">A 경로 (OGG1 효소)<br><small>상태: 정상 작동</small></div>
+            <div class="pathway inactive" id="c-path-b">B 경로 (BRCA 유전자)<br><small>상태: 돌연변이로 파괴됨</small></div>
+            <div class="status-box" id="c-status">⚠️ 간신히 연명 중 (외줄 타기)</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="next-btn" onclick="nextStep()">🧪 표적항암제(OGG1 저해제) 투여하기</button>
+        <button id="reset-btn" onclick="resetSim()" style="display: none; background-color: #95a5a6;">🔄 처음으로</button>
+    </div>
+
+    <script>
+        let step = 1;
+
+        function nextStep() {
+            if (step === 1) {
+                // 2단계: 약물 투여 (OGG1 저해)
+                document.getElementById('step-desc').innerText = "2단계: OGG1 활성 부위 차단 중...";
+                document.getElementById('step-desc').style.color = "#d35400";
+                
+                // 정상세포 A경로 차단
+                document.getElementById('n-path-a').className = "pathway inactive";
+                document.getElementById('n-path-a').innerHTML = "A 경로 (OGG1 효소)<br><small>상태: 약물에 의해 차단됨</small>";
+                
+                // 암세포 A경로 차단
+                document.getElementById('c-path-a').className = "pathway inactive";
+                document.getElementById('c-path-a').innerHTML = "A 경로 (OGG1 효소)<br><small>상태: 약물에 의해 차단됨</small>";
+
+                document.getElementById('next-btn').innerText = "▶ 결과 확인하기";
+                step = 2;
+
+            } else if (step === 2) {
+                // 3단계: 최종 결과 (합성치사)
+                document.getElementById('step-desc').innerText = "3단계: 최종 결과 (합성치사 완성!)";
+                document.getElementById('step-desc').style.color = "#c0392b";
+
+                // 정상세포 결과
+                let nStatus = document.getElementById('n-status');
+                nStatus.innerHTML = "✅ 생존<br><small>(B 경로가 백업하여 복구 성공)</small>";
+                nStatus.style.background = "#d4efdf"; nStatus.style.color = "#196f3d";
+
+                // 암세포 결과 (합성치사)
+                let cStatus = document.getElementById('c-status');
+                cStatus.innerHTML = "💥 세포 사멸 (Apoptosis)<br><small>(2중 복구 실패로 자폭!)</small>";
+                cStatus.style.background = "#fadbd8"; cStatus.style.color = "#943126";
+                document.getElementById('cancer-box').style.transform = "scale(0.95)";
+                document.getElementById('cancer-box').style.opacity = "0.7";
+
+                document.getElementById('next-btn').style.display = "none";
+                document.getElementById('reset-btn').style.display = "inline-block";
+            }
+        }
+
+        function resetSim() {
+            location.reload(); // 페이지 새로고침으로 초기화
+        }
+    </script>
+</body>
+</html>
